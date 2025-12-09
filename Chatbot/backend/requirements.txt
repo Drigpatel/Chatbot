@@ -9,3 +9,5 @@ python-dotenv
 requests
 httpx
 typing-extensions
+langchain-openai==0.1.7
+python-dotenv==1.0.1

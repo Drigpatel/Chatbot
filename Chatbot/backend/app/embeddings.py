@@ -8,20 +8,16 @@ MODEL_NAME = "all-MiniLM-L6-v2"
 INDEX_PATH = Path(__file__).parent / "faiss_index.bin"
 META_PATH = Path(__file__).parent / "faiss_meta.json"
 
-
 class EmbeddingIndex:
-    def __init__(self, model_name: str = MODEL_NAME):
+    def __init__(self, model_name=MODEL_NAME):
         self.model = SentenceTransformer(model_name)
         self.index = None
         self.meta = []
 
-    def build(self, questions_json_path: str):
-        """Create embeddings index from questions dataset."""
-        with open(questions_json_path, "r", encoding="utf-8") as f:
-            questions = json.load(f)
-
-        texts = [q["question"] for q in questions]
-        self.meta = questions
+    def build(self, path):
+        data = json.load(open(path, "r", encoding="utf-8"))
+        texts = [item["question"] for item in data]
+        self.meta = data
 
         embeddings = self.model.encode(texts, convert_to_numpy=True)
         faiss.normalize_L2(embeddings)
@@ -31,42 +27,29 @@ class EmbeddingIndex:
         self.index.add(embeddings)
 
         faiss.write_index(self.index, str(INDEX_PATH))
-        with open(META_PATH, "w", encoding="utf-8") as f:
-            json.dump(self.meta, f)
-
-        print("Embedding index built successfully.")
+        json.dump(self.meta, open(META_PATH, "w", encoding="utf-8"))
 
     def load(self):
-        """Load an existing FAISS index from disk."""
         if INDEX_PATH.exists() and META_PATH.exists():
             self.index = faiss.read_index(str(INDEX_PATH))
-            with open(META_PATH, "r", encoding="utf-8") as f:
-                self.meta = json.load(f)
+            self.meta = json.load(open(META_PATH, "r", encoding="utf-8"))
         else:
-            raise RuntimeError("Index not found. Please run build() first.")
+            raise RuntimeError("No FAISS index found. Build first!")
 
-    def query(self, text: str, top_k: int = 5):
-        """Search similar questions and return structured results."""
+    def query(self, text, top_k=5):
         if self.index is None:
-            raise RuntimeError("Index not loaded. Call load() first.")
+            raise RuntimeError("Index not loaded")
 
-        vector = self.model.encode([text], convert_to_numpy=True)
-        faiss.normalize_L2(vector)
+        vec = self.model.encode([text], convert_to_numpy=True)
+        faiss.normalize_L2(vec)
 
-        distances, indices = self.index.search(vector, top_k)
-
+        D, I = self.index.search(vec, top_k)
         results = []
-        for score, idx in zip(distances[0], indices[0]):
-            if idx < 0:
-                continue
-
-            meta_item = self.meta[idx]
-
+        for score, idx in zip(D[0], I[0]):
+            if idx < 0: continue
             results.append({
                 "score": float(score),
-                "question": meta_item.get("question", ""),
-                "id": meta_item.get("id", idx),
-                "metadata": meta_item
+                "question": self.meta[idx]["question"],
+                "id": self.meta[idx].get("id", idx),
             })
-
         return results

@@ -18,38 +18,33 @@ async function sendMessage() {
   append(text, "user");
   inputEl.value = "";
 
-  // Step 1: Validate input (semantic correctness)
   append("Validating question...");
-  const validationRes = await fetch(base + "/chat", {
+  const valRes = await fetch(base + "/chat", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ message: text }),
   });
-  const validationData = await validationRes.json();
-
-  const validation = validationData.validation;
-  chatEl.lastChild.innerText = validation.is_valid
-    ? "Validation: Valid question"
-    : "Invalid: " + validation.reason;
+  const valData = await valRes.json();
+  const validation = valData.validation;
 
   if (!validation.is_valid) {
-    append("Try rewriting your question and send again.");
+    append("Invalid question: " + validation.reason);
     return;
   }
+  append("Validation: Valid question");
 
-  // Step 2: Refine input
   append("Refining question...");
   const refineRes = await fetch(base + "/refine", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ question: text, feedback: "" }),
   });
-  const refineData = await refineRes.json();
 
+  const refineData = await refineRes.json();
   const refined = refineData.refined_answer;
+
   append("Refined: " + refined.revised_question);
 
-  // Step 3: Similarity check
   append("Checking for similar questions...");
   const simRes = await fetch(base + "/similarity", {
     method: "POST",
@@ -58,13 +53,11 @@ async function sendMessage() {
   });
   const simData = await simRes.json();
 
-  if (simData.similar && simData.similar.length > 0) {
+  if (simData.similar?.length > 0) {
     append("Similar questions found:");
-    simData.similar.forEach((item) => {
-      append(
-        "- " + item.question + " (Match Score: " + item.score.toFixed(2) + ")"
-      );
-    });
+    simData.similar.forEach((s) =>
+      append("- " + s.question + " (score " + s.score.toFixed(2) + ")")
+    );
   } else {
     append("No similar questions found.");
   }
