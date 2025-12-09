@@ -8,9 +8,7 @@ from dotenv import load_dotenv
 from app.langchain_flow import LangChainFlows
 from app.embeddings import EmbeddingIndex
 from fastapi.responses import RedirectResponse
-from mangum import Mangum  # Needed for Vercel/Serverless
 
-handler = Mangum(app)
 # Load .env
 load_dotenv()
 
@@ -79,3 +77,6 @@ async def similarity(req: RefineRequest):
         return {"similar": similar}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+from mangum import Mangum
+handler = Mangum(app)
