@@ -7,7 +7,10 @@ from dotenv import load_dotenv
 
 from app.langchain_flow import LangChainFlows
 from app.embeddings import EmbeddingIndex
+from fastapi.responses import RedirectResponse
+from mangum import Mangum  # Needed for Vercel/Serverless
 
+handler = Mangum(app)
 # Load .env
 load_dotenv()
 
