@@ -1,74 +1,109 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
   <head>
-    <meta charset="utf-8" />
-    <title>Math Refinement Chatbottt</title>
+    <meta charset="UTF-8" />
+    <title>Math Refinement Chatbot</title>
 
     <style>
       body {
-        font-family: "Segoe UI", Arial, sans-serif;
-        background: linear-gradient(135deg, #dde5ff, #eef3ff);
         margin: 0;
+        font-family: "Inter", Arial, sans-serif;
+        background: #f7f8fc;
         display: flex;
         justify-content: center;
         align-items: center;
-        min-height: 100vh;
+        height: 100vh;
       }
 
-      .container {
+      .chat-container {
         width: 95%;
         max-width: 900px;
-        background: #ffffff;
-        border-radius: 16px;
-        box-shadow: 0 4px 18px rgba(0, 0, 0, 0.08);
-        overflow: hidden;
+        height: 90vh;
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
         display: flex;
         flex-direction: column;
-        height: 90vh;
+        overflow: hidden;
       }
 
       .header {
         background: #4c6ef5;
         color: white;
+        padding: 16px;
+        font-size: 20px;
+        font-weight: 600;
         text-align: center;
-        font-size: 22px;
-        padding: 15px;
-        font-weight: bold;
-        position: sticky;
-        top: 0;
-        z-index: 10;
       }
 
       #chat {
         flex: 1;
-        padding: 18px;
+        padding: 20px;
         overflow-y: auto;
         display: flex;
         flex-direction: column;
         gap: 14px;
+        scroll-behavior: smooth;
+        background: #f0f2fa;
       }
 
       .msg {
         max-width: 75%;
         padding: 12px 16px;
-        border-radius: 14px;
-        line-height: 1.45;
         font-size: 15px;
-        word-wrap: break-word;
+        border-radius: 12px;
+        line-height: 1.45;
         white-space: pre-wrap;
-        animation: fadeIn 0.2s ease-in-out;
-      }
-
-      .bot {
-        background: #f1f4ff;
-        align-self: flex-start;
-        border-bottom-left-radius: 4px;
+        animation: fadeIn 0.25s ease;
       }
 
       .user {
-        background: #d9ebff;
         align-self: flex-end;
+        background: #d6e8ff;
         border-bottom-right-radius: 4px;
+      }
+
+      .bot {
+        align-self: flex-start;
+        background: #ffffff;
+        border-bottom-left-radius: 4px;
+        border: 1px solid #e2e2e2;
+      }
+
+      /* Typing indicator */
+      .typing {
+        display: flex;
+        gap: 6px;
+        padding: 10px 16px;
+        background: white;
+        border-radius: 12px;
+        width: fit-content;
+        border: 1px solid #e0e0e0;
+      }
+      .dot {
+        width: 8px;
+        height: 8px;
+        background: #4c6ef5;
+        border-radius: 50%;
+        animation: blink 1.4s infinite;
+      }
+      .dot:nth-child(2) {
+        animation-delay: 0.2s;
+      }
+      .dot:nth-child(3) {
+        animation-delay: 0.4s;
+      }
+
+      @keyframes blink {
+        0% {
+          opacity: 0.2;
+        }
+        50% {
+          opacity: 1;
+        }
+        100% {
+          opacity: 0.2;
+        }
       }
 
       @keyframes fadeIn {
@@ -82,46 +117,43 @@
         }
       }
 
+      /* Input area */
       .input-area {
-        padding: 12px;
-        background: #ffffff;
-        border-top: 1px solid #d0d7e0;
         display: flex;
-        gap: 10px;
-        position: sticky;
-        bottom: 0;
+        gap: 12px;
+        padding: 12px;
+        border-top: 1px solid #ddd;
+        background: white;
       }
 
       textarea {
         flex: 1;
         padding: 12px;
-        font-size: 15px;
-        border: 1px solid #ccd2e0;
+        font-size: 16px;
         border-radius: 10px;
         resize: none;
+        border: 1px solid #ccc;
         height: 55px;
       }
 
       button {
         background: #4c6ef5;
         border: none;
-        padding: 0 18px;
-        font-size: 16px;
         color: white;
+        padding: 0 20px;
         border-radius: 10px;
         cursor: pointer;
+        font-size: 16px;
         transition: 0.2s;
-        height: 55px;
       }
-
       button:hover {
-        background: #3853b7;
+        background: #3b55c7;
       }
     </style>
   </head>
 
   <body>
-    <div class="container">
+    <div class="chat-container">
       <div class="header">📘 Math Refinement Chatbot</div>
 
       <div id="chat"></div>
