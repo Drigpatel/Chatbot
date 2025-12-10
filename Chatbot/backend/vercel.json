@@ -2,7 +2,8 @@
   "version": 2,
   "functions": {
     "app/main.py": {
-      "runtime": "python3.9"
+      "runtime": "python3.9",
+      "maxDuration": 30
     }
   },
   "routes": [
