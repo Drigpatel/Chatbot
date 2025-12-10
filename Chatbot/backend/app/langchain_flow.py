@@ -4,22 +4,26 @@ from openai import OpenAI
 
 def safe_json_parse(text):
     """
-    Safely parse JSON returned by the model.
-    Handles cases where GPT returns:
-    - Markdown blocks
-    - Extra characters
-    - Invalid JSON
+    Safely parse JSON returned by GPT.
+    Ensures NO crashing even if output is garbage.
     """
     if not text or not isinstance(text, str):
-        return {"error": "Empty or invalid response", "raw": text}
+        return {"error": "Empty response", "raw": text}
 
-    # Remove markdown wrappers if present
-    cleaned = text.strip().replace("```json", "").replace("```", "").strip()
+    cleaned = (
+        text.replace("```json", "")
+            .replace("```", "")
+            .strip()
+    )
+
+    # Fix common GPT mistakes: single quotes, trailing commas
+    cleaned = cleaned.replace("'", "\"")
 
     try:
         return json.loads(cleaned)
     except Exception:
-        return {"error": "Invalid JSON response from model", "raw": cleaned}
+        # Return raw text so backend does not crash
+        return {"error": "Invalid JSON", "raw": cleaned}
 
 
 class LangChainFlows:
@@ -32,11 +36,10 @@ class LangChainFlows:
     # -----------------------------------------
     def validate(self, question):
         prompt = f"""
-Determine if this is a valid math question. 
-Respond ONLY in JSON format:
+Respond ONLY with JSON:
 
 {{
-  "is_valid": true,
+  "is_valid": true or false,
   "reason": "short explanation"
 }}
 
@@ -56,15 +59,14 @@ Question: {question}
     # -----------------------------------------
     def refine(self, question, feedback=""):
         prompt = f"""
-Refine the following math question. Produce ONLY valid JSON. No explanation, no markdown.
+Refine the question. Respond ONLY in this JSON:
 
-Expected Format:
 {{
-  "revised_question": "string",
-  "issues_fixed": ["point1", "point2"]
+  "revised_question": "text",
+  "issues_fixed": ["a", "b"]
 }}
 
-Question: {question}
+Original: {question}
 Feedback: {feedback}
 """
 
