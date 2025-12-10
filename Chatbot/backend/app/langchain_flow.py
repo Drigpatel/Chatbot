@@ -4,11 +4,11 @@ from openai import OpenAI
 
 def safe_json_parse(text):
     """
-    Safely parse JSON returned by GPT.
-    Ensures NO crashing even if output is garbage.
+    Safely parse JSON returned from GPT.
+    Ensures NO crashes even when GPT returns invalid JSON.
     """
     if not text or not isinstance(text, str):
-        return {"error": "Empty response", "raw": text}
+        return {"error": "Empty GPT response", "raw": text}
 
     cleaned = (
         text.replace("```json", "")
@@ -16,13 +16,14 @@ def safe_json_parse(text):
             .strip()
     )
 
-    # Fix common GPT mistakes: single quotes, trailing commas
+    # Convert single quotes → double quotes
     cleaned = cleaned.replace("'", "\"")
 
+    # Try normal JSON load
     try:
         return json.loads(cleaned)
     except Exception:
-        # Return raw text so backend does not crash
+        # Last fallback → still return usable structure
         return {"error": "Invalid JSON", "raw": cleaned}
 
 
@@ -31,9 +32,9 @@ class LangChainFlows:
         self.client = OpenAI(api_key=openai_api_key)
         self.model = model_name
 
-    # -----------------------------------------
-    # VALIDATION
-    # -----------------------------------------
+    # ---------------------------
+    # VALIDATE
+    # ---------------------------
     def validate(self, question):
         prompt = f"""
 Respond ONLY with JSON:
@@ -52,18 +53,20 @@ Question: {question}
         )
 
         raw = res.choices[0].message.content
+        print("RAW VALIDATE OUTPUT:", raw)
+
         return safe_json_parse(raw)
 
-    # -----------------------------------------
-    # REFINEMENT
-    # -----------------------------------------
+    # ---------------------------
+    # REFINE
+    # ---------------------------
     def refine(self, question, feedback=""):
         prompt = f"""
-Refine the question. Respond ONLY in this JSON:
+Refine the question. Respond ONLY in JSON:
 
 {{
   "revised_question": "text",
-  "issues_fixed": ["a", "b"]
+  "issues_fixed": ["item1", "item2"]
 }}
 
 Original: {question}
@@ -76,4 +79,6 @@ Feedback: {feedback}
         )
 
         raw = res.choices[0].message.content
+        print("RAW REFINE OUTPUT:", raw)
+
         return safe_json_parse(raw)

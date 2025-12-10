@@ -8,12 +8,11 @@ from dotenv import load_dotenv
 from app.langchain_flow import LangChainFlows
 from app.embeddings import EmbeddingIndex
 
-# Load env variables
+# Load env
 load_dotenv()
 
 app = FastAPI(title="ChatBot Backend API")
 
-# CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -23,32 +22,31 @@ app.add_middleware(
 
 BASE_DIR = Path(__file__).parent
 
-# OpenAI keys
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
 
 if not OPENAI_API_KEY:
-    print("WARNING: OPENAI_API_KEY is missing — responses may fail.")
+    print("WARNING: No OPENAI_API_KEY provided!")
 
-# Initialize LangChainFlows
 flows = LangChainFlows(
     openai_api_key=OPENAI_API_KEY,
     model_name=OPENAI_MODEL
 )
 
-# Embedding index
 QUESTIONS_FILE = BASE_DIR / "questions.json"
 EMB = EmbeddingIndex()
 
 try:
     EMB.load()
-    print("Embeddings loaded successfully.")
+    print("Embedding index loaded.")
 except Exception:
-    print("No embedding index found — building one...")
+    print("Building embedding index...")
     EMB.build(str(QUESTIONS_FILE))
 
 
-# -------------------- MODELS ------------------------------
+# ---------------------------
+# MODELS
+# ---------------------------
 class ChatRequest(BaseModel):
     message: str
 
@@ -57,7 +55,9 @@ class RefineRequest(BaseModel):
     feedback: str | None = ""
 
 
-# -------------------- ROUTES ------------------------------
+# ---------------------------
+# ROUTES
+# ---------------------------
 @app.get("/")
 async def root():
     return {"status": "Chatbot Backend Running"}
@@ -65,36 +65,32 @@ async def root():
 
 @app.post("/chat")
 async def chat(req: ChatRequest):
-    """Validate the question."""
     try:
-        validation = flows.validate(req.message)
-        return {"validation": validation}
+        result = flows.validate(req.message)
+        print("VALIDATION:", result)
+        return {"validation": result}
     except Exception as e:
-        print("Chat error:", e)
+        print("CHAT ERROR:", e)
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.post("/refine")
 async def refine(req: RefineRequest):
-    """Refine the question using GPT."""
     try:
         result = flows.refine(req.question, req.feedback or "")
+        print("REFINE:", result)
         return {"refined_answer": result}
     except Exception as e:
-        print("Refine error:", e)
-        raise HTTPException(status_code=400, detail=str(e))
+        print("REFINE ERROR:", e)
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.post("/similarity")
 async def similarity(req: RefineRequest):
-    """Return similar questions based on embeddings."""
     try:
-        threshold = float(os.getenv("SIM_THRESH", 0.8))
         results = EMB.query(req.question, top_k=5)
-
-        similar = [r for r in results if r["score"] >= threshold]
+        similar = [r for r in results if r["score"] >= 0.80]
         return {"similar": similar}
-
     except Exception as e:
-        print("Similarity error:", e)
-        raise HTTPException(status_code=400, detail=str(e))
+        print("SIMILARITY ERROR:", e)
+        raise HTTPException(status_code=500, detail=str(e))
