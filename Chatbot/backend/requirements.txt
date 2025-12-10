@@ -1,14 +1,8 @@
 fastapi
 uvicorn[standard]
 openai
-langchain
-pydantic
-sentence-transformers
-faiss-cpu
 python-dotenv
 requests
 httpx
+pydantic
 typing-extensions
-langchain-openai==0.1.7
-python-dotenv==1.0.1
-mangum

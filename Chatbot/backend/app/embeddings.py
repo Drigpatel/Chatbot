@@ -1,55 +1,51 @@
 import json
-import faiss
-import numpy as np
 from pathlib import Path
-from sentence_transformers import SentenceTransformer
+from math import sqrt
+from openai import OpenAI
+import os
 
-MODEL_NAME = "all-MiniLM-L6-v2"
-INDEX_PATH = Path(__file__).parent / "faiss_index.bin"
 META_PATH = Path(__file__).parent / "faiss_meta.json"
 
 class EmbeddingIndex:
-    def __init__(self, model_name=MODEL_NAME):
-        self.model = SentenceTransformer(model_name)
-        self.index = None
+    def __init__(self):
+        self.client = OpenAI()
         self.meta = []
-
-    def build(self, path):
-        data = json.load(open(path, "r", encoding="utf-8"))
-        texts = [item["question"] for item in data]
-        self.meta = data
-
-        embeddings = self.model.encode(texts, convert_to_numpy=True)
-        faiss.normalize_L2(embeddings)
-
-        dim = embeddings.shape[1]
-        self.index = faiss.IndexFlatIP(dim)
-        self.index.add(embeddings)
-
-        faiss.write_index(self.index, str(INDEX_PATH))
-        json.dump(self.meta, open(META_PATH, "w", encoding="utf-8"))
+    
+    def build(self, questions_json_path):
+        with open(questions_json_path, 'r', encoding='utf-8') as f:
+            self.meta = json.load(f)
+        
+        with open(META_PATH, 'w', encoding='utf-8') as f:
+            json.dump(self.meta, f)
 
     def load(self):
-        if INDEX_PATH.exists() and META_PATH.exists():
-            self.index = faiss.read_index(str(INDEX_PATH))
-            self.meta = json.load(open(META_PATH, "r", encoding="utf-8"))
+        if META_PATH.exists():
+            with open(META_PATH, 'r', encoding='utf-8') as f:
+                self.meta = json.load(f)
         else:
-            raise RuntimeError("No FAISS index found. Build first!")
+            raise RuntimeError("Index not built. Call build() first.")
+
+    def embed(self, text):
+        res = self.client.embeddings.create(
+            model="text-embedding-3-small",
+            input=text
+        )
+        return res.data[0].embedding
+
+    def cosine(self, a, b):
+        dot = sum(x * y for x, y in zip(a, b))
+        mag_a = sqrt(sum(x * x for x in a))
+        mag_b = sqrt(sum(x * x for x in b))
+        return dot / (mag_a * mag_b)
 
     def query(self, text, top_k=5):
-        if self.index is None:
-            raise RuntimeError("Index not loaded")
-
-        vec = self.model.encode([text], convert_to_numpy=True)
-        faiss.normalize_L2(vec)
-
-        D, I = self.index.search(vec, top_k)
+        q_emb = self.embed(text)
         results = []
-        for score, idx in zip(D[0], I[0]):
-            if idx < 0: continue
-            results.append({
-                "score": float(score),
-                "question": self.meta[idx]["question"],
-                "id": self.meta[idx].get("id", idx),
-            })
-        return results
+
+        for item in self.meta:
+            emb = self.embed(item["question"])
+            score = self.cosine(q_emb, emb)
+            results.append({"score": score, "meta": item})
+
+        results.sort(key=lambda x: x["score"], reverse=True)
+        return results[:top_k]

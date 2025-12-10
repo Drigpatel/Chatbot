@@ -33,12 +33,9 @@ flows = LangChainFlows(openai_api_key=OPENAI_API_KEY, model_name=OPENAI_MODEL)
 
 QUESTIONS_FILE = BASE_DIR / "questions.json"
 EMB = EmbeddingIndex()
-
 try:
     EMB.load()
-    print("Embedding index loaded successfully.")
 except Exception:
-    print("No embedding index found, building new one...")
     EMB.build(str(QUESTIONS_FILE))
 
 class ChatRequest(BaseModel):
